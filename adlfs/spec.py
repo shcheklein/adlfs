@@ -1995,9 +1995,10 @@ class AzureBlobFile(AbstractBufferedFile):
             by `cache_type`.
 
         version_id : str
-            Optional version to read the file at.  If not specified this will
-            default to the current version of the object.  This is only used for
-            reading.
+            Optional version of the blob.  For reads, specifies which version to
+            read; if not given, defaults to the current version.  On write, this
+            attribute is populated with the version created by the upload when the
+            filesystem has ``version_aware=True``.
 
         kwargs: dict
             Passed to AbstractBufferedFile
@@ -2307,14 +2308,12 @@ class AzureBlobFile(AbstractBufferedFile):
                     raise RuntimeError(f"Failed to upload block: {e}!") from e
         elif self.mode == "ab":
             async with self.container_client.get_blob_client(blob=self.blob) as bc:
-                response = await bc.upload_blob(
+                await bc.upload_blob(
                     data=data,
                     length=length,
                     blob_type=BlobType.AppendBlob,
                     metadata=self.metadata,
                 )
-                if self.fs.version_aware:
-                    self.version_id = response.get("version_id")
         else:
             raise ValueError(
                 "File operation modes other than wb, xb or ab are not supported for upload_chunk"
